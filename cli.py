@@ -2,6 +2,8 @@ import os
 import sys
 import argparse
 import configparser
+import pkg_resources
+from collections import Counter
 from pathlib import Path
 from secure_handler import SecureHandler
 
@@ -89,8 +91,13 @@ def main():
                         dest='operation', action='store_true')
     PARSER.add_argument('-p', '--pid', help='show pid configuration',
                         default=False, dest='pid', action='store_true')
-    PARSER.add_argument('-m', '--miner', help='show pid configuration',
-                        dest='miner', action='store_true')
+    PARSER.add_argument('-m', '--miners', help='show miner overview',
+                        dest='miners', action='store_true')
+    PARSER.add_argument('-s', '--summary', help='show miner summary',
+                        dest='summary', action='store_true')
+    PARSER.add_argument('-q', '--query', help='query state of specific miner',
+                        dest='query', metavar='ID')
+
 
     _prepare_folder()
     args = PARSER.parse_args()
@@ -116,17 +123,60 @@ def main():
     sec_handler = SecureHandler(key_location, backend_addr)
 
     if args.info or args.all:
-        print(sec_handler.get('/info'))
+        info = sec_handler.get('/info')
+        version = pkg_resources.require('minerctl_cli')[0].version
+        print('Firmware version of microcontroller: {}, Version of minerctl_cli: {}'
+              .format(info['firmware_version'], version))
     if args.temp or args.all:
-        print(sec_handler.get('/temp'))
+        temp = sec_handler.get('/temp')
+        temps = ', '.join([f'Sensor #{key}: {value}°C' \
+                           for key, value in temp['measurements'].items()])
+        print('Measurements: {}'.format(temps))
+        print('Target temperature: {}°C'.format(temp['target']))
+        print('Main sensor id: #{}'.format(temp['sensor_id']))
+        print('External reference temperature: {}°C'.format(temp['external']))
     if args.filter or args.all:
-        print(sec_handler.get('/filter'))
+        filter = sec_handler.get('/filter')
+        print('Differential pressure: {}mBar'.format(filter['pressure_diff']))
+        print('Differential pressure threshold: {}mBar'
+              .format(filter['threshold']))
+        print('Filter needs cleaning: {}'.format(str(filter['status_ok'])))
     if args.ventilation or args.all:
-        print(sec_handler.get('/fans'))
+        vent = sec_handler.get('/fans')
+        print('Minimum RPM: {}%, Maximum RPM: {}%, Current RPM: {}%'
+              .format(vent['min_rpm'], vent['max_rpm'], vent['rpm']))
     if args.operation or args.all:
-        print(sec_handler.get('/mode'))
+        op = sec_handler.get('/mode')
+        mode = op.pop('active_mode', None)
+        mode_settings = ', '.join([f'{key}: {value}ms' \
+                           for key, value in op.items()])
+        print('Active mode: {}, {}'.format(mode, mode_settings))
     if args.pid or args.all:
-        print(sec_handler.get('/pid'))
-    if args.miner or args.all:
-        # TODO
-        pass
+        pid = sec_handler.get('/pid')
+        pid_settings = ', '.join([f'{key}: {value}' \
+                           for key, value in pid.items()])
+        print('PID: {}'.format(pid_settings))
+    if args.miners or args.all:
+        cfg = sec_handler.get('/cfg')
+        cntr = Counter(miners)
+        summary = {'on': cntr[True], 'off': cntr[False], 'disabled': cntr[None]}
+        summary_text = ', '.join([f'{key}: {value}'\
+                                    for key, value in summary.items()])
+        print('Miner states: {}'.format(summary_text))
+    if args.query:
+        state = sec_handler.get('/miner?id={}'.format(args.query))['running']
+        if state == None:
+            msg = 'disabled'
+        elif state:
+            msg = 'on'
+        elif not state:
+            msg = 'off'
+        print('Miner #{} state: {}'.format(args.query, msg))
+    if args.summary:
+        states = sec_handler.get('/cfg')['miners']
+        ids_on = [i for i, x in enumerate(states) if x == True]
+        ids_off = [i for i, x in enumerate(states) if x == False]
+        ids_disabled = [i for i, x in enumerate(states) if x == None]
+        print('Miners turned on: {}'.format(', '.join('#{}'.format(i) for i in ids_on)))
+        print('Miners turned off: {}'.format(', '.join('#{}'.format(i) for i in ids_off)))
+        print('Disabled miners: {}'.format(', '.join('#{}'.format(i) for i in ids_disabled)))
