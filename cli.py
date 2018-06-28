@@ -209,7 +209,7 @@ def main():
         print('Disabled miners: {}'.format(', '.join('#{}'.format(i) for i in ids_disabled)))
 
     if args.set_mode:
-        # exit if only `set` has been entered
+        # exit if only `minerctl set` has been entered
         if len(sys.argv) == 2:
             _error_exit(SET_PARSER)
 

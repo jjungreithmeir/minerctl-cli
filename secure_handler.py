@@ -3,6 +3,7 @@ import jwt
 import requests
 import time
 import getpass
+from requests.exceptions import ConnectionError
 
 
 class SecureHandler:
@@ -26,19 +27,45 @@ class SecureHandler:
         self.adapter = requests.adapters.HTTPAdapter(max_retries=10)
         self.session.mount('http://', self.adapter)
 
+    def _check_authorization_success(self, resp):
+        if 'msg' in resp:
+            print('JWT token authorization unsuccessfull. '
+                  'Please check with your administrator whether your '
+                  'public key was stored in the backend config.')
+            print('Error: {}'.format(resp['msg']))
+            sys.exit(1)
+
+    def _connection_error(self):
+        print('Connection to backend could not be established. '
+              'Check your settings and try again.')
+        sys.exit(1)
+
     def get(self, resource):
-        return self.session.get(self.connection + resource,
-                                headers=self.header).json()
+        try:
+            resp = self.session.get(self.connection + resource,
+                                    headers=self.header).json()
+            self._check_authorization_success(resp)
+            return resp
+        except ConnectionError:
+            self._connection_error()
 
     def put(self, resource, data):
-        resp = self.session.put(self.connection + resource, data=data,
-                                headers=self.header)
-        return resp.raise_for_status()
+        try:
+            resp = self.session.put(self.connection + resource, data=data,
+                                    headers=self.header)
+            self._check_authorization_success(resp)
+            return resp.raise_for_status()
+        except ConnectionError:
+            self._connection_error()
 
     def patch(self, resource, data):
-        resp = self.session.patch(self.connection + resource, data=data,
-                                headers=self.header)
-        return resp.raise_for_status()
+        try:
+            resp = self.session.patch(self.connection + resource, data=data,
+                                    headers=self.header)
+            self._check_authorization_success(resp)
+            return resp.raise_for_status()
+        except ConnectionError:
+            self._connection_error()
 
     def safe_patch(self, resource, data):
         """
@@ -46,9 +73,11 @@ class SecureHandler:
         JSON dict. This is done in order to avoid resetting any values that have
         not been passed.
         """
-        curr_data = self.session.get(self.connection + resource,
-                                headers=self.header).json()
-        for key, value in data.items():
-            curr_data[key] = value
+        try:
+            curr_data = self.get(resource)
+            for key, value in data.items():
+                curr_data[key] = value
 
-        self.patch(resource, curr_data)
+            self.patch(resource, curr_data)
+        except ConnectionError:
+            self._connection_error()
