@@ -1,8 +1,8 @@
 import sys
-import jwt
-import requests
 import time
 import getpass
+import jwt
+import requests
 from requests.exceptions import ConnectionError
 
 
@@ -27,7 +27,8 @@ class SecureHandler:
         self.adapter = requests.adapters.HTTPAdapter(max_retries=10)
         self.session.mount('http://', self.adapter)
 
-    def _check_authorization_success(self, resp):
+    @staticmethod
+    def _check_authorization_success(resp):
         if 'msg' in resp:
             print('JWT token authorization unsuccessfull. '
                   'Please check with your administrator whether your '
@@ -35,7 +36,8 @@ class SecureHandler:
             print('Error: {}'.format(resp['msg']))
             sys.exit(1)
 
-    def _connection_error(self):
+    @staticmethod
+    def _connection_error():
         print('Connection to backend could not be established. '
               'Check your settings and try again.')
         sys.exit(1)
@@ -61,7 +63,7 @@ class SecureHandler:
     def patch(self, resource, data):
         try:
             resp = self.session.patch(self.connection + resource, data=data,
-                                    headers=self.header)
+                                      headers=self.header)
             self._check_authorization_success(resp)
             return resp.raise_for_status()
         except ConnectionError:
