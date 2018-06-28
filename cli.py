@@ -12,6 +12,8 @@ CONFIG_FILE_LOCATION = HOME + '/' + '.minerctl'
 CONFIG_FILE_NAME = 'config.ini'
 CONFIG_FILE = CONFIG_FILE_LOCATION + '/' + CONFIG_FILE_NAME
 PARSER = argparse.ArgumentParser()
+SUBPARSERS = PARSER.add_subparsers(dest='set_mode', metavar='modes')
+SET_PARSER = SUBPARSERS.add_parser('set', help='SET mode for remote configuration')
 
 def _prepare_folder():
     if not os.path.isdir(CONFIG_FILE_LOCATION):
@@ -65,18 +67,18 @@ def _only_certain_attributes_given(args, attributes):
             return False
     return True
 
-def _error_exit():
-    PARSER.print_help()
+def _error_exit(parser):
+    parser.print_help()
     sys.exit(1)
 
-def main():
+def _setup_arguments():
     PARSER.add_argument('-i', '--info', help='show basic version info about\
                         the CLI tool and the backend', default=False,
                         dest='info', action='store_true')
     PARSER.add_argument('-k', '--key', help='set private key location',
-                        dest='key')
+                        dest='key', metavar='<path>')
     PARSER.add_argument('-b', '--backend', help='set backend address and port \
-                        (eg: 127.0.0.1:12345)', dest='backend')
+                        (eg: 127.0.0.1:12345)', dest='backend', metavar='<ip:port>')
     PARSER.add_argument('-a', '--all', help='show all available data',
                         default=False, dest='all', action='store_true')
     PARSER.add_argument('-t', '--temp', help='show temperatures',
@@ -96,13 +98,38 @@ def main():
     PARSER.add_argument('-s', '--summary', help='show miner summary',
                         dest='summary', action='store_true')
     PARSER.add_argument('-q', '--query', help='query state of specific miner',
-                        dest='query', metavar='ID')
+                        dest='query', metavar='<ID>')
 
+    SET_PARSER.add_argument('--target', help='set target temperature',
+                            dest='set_target', metavar='<temperature>')
+    SET_PARSER.add_argument('--sensor_id', help='set main sensor id',
+                            dest='set_sensor_id', metavar='<ID>')
+    SET_PARSER.add_argument('--external', help='set external reference temperature',
+                            dest='set_external', metavar='<temperature>')
+    SET_PARSER.add_argument('--threshold', help='set differential pressure threshold',
+                            dest='set_threshold', metavar='<pressure>')
+    SET_PARSER.add_argument('--min-rpm', help='set minimum fan RPM',
+                            dest='set_min_rpm', metavar='<rpm>')
+    SET_PARSER.add_argument('--max-rpm', help='set maximum fan RPM',
+                            dest='set_max_rpm', metavar='<rpm>')
+    SET_PARSER.add_argument('--miner', help='set miner state to on, off, enable (=on), disable',
+                            dest='set_miner', nargs=2, metavar=('<ID>', '<state>'))
+    SET_PARSER.add_argument('--proportional', help='set PID proportional value',
+                            dest='set_proportional', metavar='<number>')
+    SET_PARSER.add_argument('--integral', help='set PID integral value',
+                            dest='set_integral', metavar='<number>')
+    SET_PARSER.add_argument('--derivative', help='set PID derivative value',
+                            dest='set_derivative', metavar='<number>')
+    SET_PARSER.add_argument('--bias', help='set PID bias value',
+                            dest='set_bias', metavar='<number>')
 
+def main():
+    _setup_arguments()
     _prepare_folder()
+
     args = PARSER.parse_args()
     if len(sys.argv) == 1:
-        _error_exit()
+        _error_exit(PARSER)
 
     if args.key:
         _create_config('PKI', 'key_location', args.key)
@@ -115,7 +142,7 @@ def main():
 
     if not _check_config_file_integrity({'Connection': 'backend_addr',
                                          'PKI': 'key_location'}):
-        _error_exit()
+        _error_exit(PARSER)
 
     backend_addr = _parse_url(_load_config('Connection', 'backend_addr'))
     key_location = _load_config('PKI', 'key_location')
@@ -180,3 +207,38 @@ def main():
         print('Miners turned on: {}'.format(', '.join('#{}'.format(i) for i in ids_on)))
         print('Miners turned off: {}'.format(', '.join('#{}'.format(i) for i in ids_off)))
         print('Disabled miners: {}'.format(', '.join('#{}'.format(i) for i in ids_disabled)))
+
+    if args.set_mode:
+        # exit if only `set` has been entered
+        if len(sys.argv) == 2:
+            _error_exit(SET_PARSER)
+
+        if args.set_target:
+            sec_handler.safe_patch('/temp', {'target': args.set_target})
+        if args.set_sensor_id:
+            sec_handler.safe_patch('/temp', {'sensor_id': args.set_sensor_id})
+        if args.set_external:
+            sec_handler.safe_patch('/temp', {'external': args.set_external})
+        if args.set_threshold:
+            sec_handler.safe_patch('/filter', {'threshold': args.set_threshold})
+        if args.set_min_rpm:
+            sec_handler.safe_patch('/fans', {'min_rpm': args.set_min_rpm})
+        if args.set_max_rpm:
+            sec_handler.safe_patch('/fans', {'max_rpm': args.set_max_rpm})
+        if args.set_miner:
+            try:
+                id = int(args.set_miner[0])
+            except ValueError:
+                print('The miner ID has to be an integer!')
+                _error_exit(SET_PARSER)
+            if args.set_miner[1] not in('on', 'off', 'enable', 'disable'):
+                print('Invalid miner action!')
+                _error_exit(SET_PARSER)
+
+            sec_handler.safe_patch('/miner?id={}&action={}'.format(id, args.set_miner[1]), {})
+        if args.set_proportional:
+            sec_handler.safe_patch('/pid', {'proportional': args.set_proportional})
+        if args.set_derivative:
+            sec_handler.safe_patch('/pid', {'derivative': args.set_derivative})
+        if args.set_integral:
+            sec_handler.safe_patch('/pid', {'integral': args.set_integral})
