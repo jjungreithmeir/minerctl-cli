@@ -39,3 +39,16 @@ class SecureHandler:
         resp = self.session.patch(self.connection + resource, data=data,
                                 headers=self.header)
         return resp.raise_for_status()
+
+    def safe_patch(self, resource, data):
+        """
+        GETs the data before patching and updates the values of the returned
+        JSON dict. This is done in order to avoid resetting any values that have
+        not been passed.
+        """
+        curr_data = self.session.get(self.connection + resource,
+                                headers=self.header).json()
+        for key, value in data.items():
+            curr_data[key] = value
+
+        self.patch(resource, curr_data)
