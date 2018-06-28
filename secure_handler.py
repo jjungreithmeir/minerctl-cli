@@ -29,3 +29,13 @@ class SecureHandler:
     def get(self, resource):
         return self.session.get(self.connection + resource,
                                 headers=self.header).json()
+
+    def put(self, resource, data):
+        resp = self.session.put(self.connection + resource, data=data,
+                                headers=self.header)
+        return resp.raise_for_status()
+
+    def patch(self, resource, data):
+        resp = self.session.patch(self.connection + resource, data=data,
+                                headers=self.header)
+        return resp.raise_for_status()
