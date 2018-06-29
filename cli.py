@@ -75,6 +75,14 @@ def _error_exit(parser):
     parser.print_help()
     sys.exit(1)
 
+def _int(var, msg):
+    try:
+        integer = int(var)
+    except ValueError:
+        print('{} has to be an integer!'.format(msg))
+        _error_exit(SET_PARSER)
+    return integer
+
 def _setup_arguments():
     PARSER.add_argument('-i', '--info', help='show basic version info about '
                         'the CLI tool and the backend', default=False,
@@ -226,23 +234,28 @@ def main():
             _error_exit(SET_PARSER)
 
         if args.set_target:
-            sec_handler.safe_patch('/temp', {'target': args.set_target})
+            sec_handler.safe_patch(
+                '/temp',
+                {'target': _int(args.set_target, 'Target temperature')})
         if args.set_sensor_id:
-            sec_handler.safe_patch('/temp', {'sensor_id': args.set_sensor_id})
+            sec_handler.safe_patch(
+                '/temp',
+                {'sensor_id': _int(args.set_sensor_id, 'Sensor ID')})
         if args.set_external:
-            sec_handler.safe_patch('/temp', {'external': args.set_external})
+            sec_handler.safe_patch(
+                '/temp',
+                {'external': _int(args.set_external, 'External temperature')})
         if args.set_threshold:
-            sec_handler.safe_patch('/filter', {'threshold': args.set_threshold})
+            sec_handler.safe_patch(
+                '/filter', {'threshold': _int(args.set_threshold, 'Threshold')})
         if args.set_min_rpm:
-            sec_handler.safe_patch('/fans', {'min_rpm': args.set_min_rpm})
+            sec_handler.safe_patch(
+                '/fans', {'min_rpm': _int(args.set_min_rpm, 'Minimum RPM')})
         if args.set_max_rpm:
-            sec_handler.safe_patch('/fans', {'max_rpm': args.set_max_rpm})
+            sec_handler.safe_patch(
+                '/fans', {'max_rpm': _int(args.set_max_rpm, 'Maximum RPM')})
         if args.set_miner:
-            try:
-                miner_id = int(args.set_miner[0])
-            except ValueError:
-                print('The miner ID has to be an integer!')
-                _error_exit(SET_PARSER)
+            miner_id = _int(args.set_miner[0], 'Miner ID')
             if args.set_miner[1] not in('on', 'off', 'register', 'deregister'):
                 print('Invalid miner action!')
                 _error_exit(SET_PARSER)
@@ -250,11 +263,17 @@ def main():
             sec_handler.safe_patch('/miner?id={}&action={}'
                                    .format(miner_id, args.set_miner[1]), {})
         if args.set_proportional:
-            sec_handler.safe_put('/pid',
-                                   {'proportional': args.set_proportional})
+            sec_handler.safe_put(
+                '/pid',
+                {'proportional': _int(args.set_proportional,
+                                      'PID Proportional')})
         if args.set_derivative:
-            sec_handler.safe_put('/pid', {'derivative': args.set_derivative})
+            sec_handler.safe_put(
+                '/pid',
+                {'derivative': _int(args.set_derivative, 'PID derivative')})
         if args.set_integral:
-            sec_handler.safe_put('/pid', {'integral': args.set_integral})
+            sec_handler.safe_put(
+                '/pid', {'integral': _int(args.set_integral, 'PID integral')})
         if args.set_bias:
-            sec_handler.safe_put('/pid', {'bias': args.set_bias})
+            sec_handler.safe_put(
+                '/pid', {'bias': _int(args.set_bias, 'PID bias')})
