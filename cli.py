@@ -120,7 +120,7 @@ def _setup_arguments():
     SET_PARSER.add_argument('--max-rpm', help='set maximum fan RPM',
                             dest='set_max_rpm', metavar='<rpm>')
     SET_PARSER.add_argument('--miner', help='set miner state to on, off, '
-                            'enable (=on), disable', dest='set_miner', nargs=2,
+                            'register (=on), disable', dest='set_miner', nargs=2,
                             metavar=('<ID>', '<state>'))
     SET_PARSER.add_argument('--proportional', help='set PID proportional value',
                             dest='set_proportional', metavar='<number>')
@@ -243,7 +243,7 @@ def main():
             except ValueError:
                 print('The miner ID has to be an integer!')
                 _error_exit(SET_PARSER)
-            if args.set_miner[1] not in('on', 'off', 'enable', 'disable'):
+            if args.set_miner[1] not in('on', 'off', 'register', 'deregister'):
                 print('Invalid miner action!')
                 _error_exit(SET_PARSER)
 
