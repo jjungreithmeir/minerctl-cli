@@ -60,6 +60,16 @@ class SecureHandler:
         except ConnectionError:
             self._connection_error()
 
+    def safe_put(self, resource, data):
+        try:
+            curr_data = self.get(resource)
+            for key, value in data.items():
+                curr_data[key] = value
+
+            self.put(resource, curr_data)
+        except ConnectionError:
+            self._connection_error()
+
     def patch(self, resource, data):
         try:
             resp = self.session.patch(self.connection + resource, data=data,

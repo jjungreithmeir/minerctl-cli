@@ -250,9 +250,11 @@ def main():
             sec_handler.safe_patch('/miner?id={}&action={}'
                                    .format(miner_id, args.set_miner[1]), {})
         if args.set_proportional:
-            sec_handler.safe_patch('/pid',
+            sec_handler.safe_put('/pid',
                                    {'proportional': args.set_proportional})
         if args.set_derivative:
-            sec_handler.safe_patch('/pid', {'derivative': args.set_derivative})
+            sec_handler.safe_put('/pid', {'derivative': args.set_derivative})
         if args.set_integral:
-            sec_handler.safe_patch('/pid', {'integral': args.set_integral})
+            sec_handler.safe_put('/pid', {'integral': args.set_integral})
+        if args.set_bias:
+            sec_handler.safe_put('/pid', {'bias': args.set_bias})
