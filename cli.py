@@ -17,10 +17,20 @@ SET_PARSER = SUBPARSERS.add_parser('set',
                                    help='SET mode for remote configuration')
 
 def _prepare_folder():
+    """
+    Checks whether the folder exists and creates it if it is missing.
+    """
     if not os.path.isdir(CONFIG_FILE_LOCATION):
         os.makedirs(CONFIG_FILE_LOCATION)
 
 def _load_config(section, attr):
+    """
+    Loads the config data.
+
+    :param section: .ini section, eg [Setup]
+    :param attr: .ini variable name
+    :returns: the requested value or None
+    """
     config = configparser.ConfigParser()
     try:
         if os.path.exists(CONFIG_FILE):
@@ -34,11 +44,23 @@ def _load_config(section, attr):
     return None
 
 def _parse_url(url):
+    """
+    Appends the protocol to the URI, if necessary (for requests package).
+
+    :returns: uri str
+    """
     if not url.startswith('http://'):
         url = 'http://' + url
     return url
 
 def _create_config(section, attr, val):
+    """
+    Updates or creates entries in the main config file.
+
+    :param section: .ini section, eg [Setup]
+    :param attr: .ini variable name
+    :param val: .ini variable value
+    """
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE)
     for sec in config.sections():
@@ -52,6 +74,12 @@ def _create_config(section, attr, val):
         config.write(file)
 
 def _check_config_file_integrity(section_attr):
+    """
+    Checks whether the config file contains the passed attributes.
+
+    :param section_attr: dict with section: attr structure
+    :returns: True if all the attributes exist, False otherwise
+    """
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE)
 
@@ -63,6 +91,16 @@ def _check_config_file_integrity(section_attr):
     return response
 
 def _only_certain_attributes_given(args, attributes):
+    """
+    As argparse always creates a list of all possible options, it is necessary
+    to traverse through this whole list to find out whether, as an example only
+    the `--key` and the `--backend` options have been passed.
+
+    :param args: argparse parser result
+    :param attributes: list of attributes which should be present
+    :returns: True if ONLY the passed attributes are given, False if more are
+    given
+    """
     arguments = vars(args)
     for attr in attributes:
         arguments.pop(attr, None)
@@ -72,10 +110,24 @@ def _only_certain_attributes_given(args, attributes):
     return True
 
 def _error_exit(parser):
+    """
+    Printing the help of the injected parser and exiting the program with
+    exitcode 1.
+
+    :param parser: argparse parser object
+    """
     parser.print_help()
     sys.exit(1)
 
 def _int(var, msg):
+    """
+    Attempts to cast a (str) value/object into an integer and exits the program
+    in case an unparsable value is present.
+
+    :param var: eg "5"
+    :msg: will be inserted into '{} has to be an integer!' error message
+    :returns: casted int
+    """
     try:
         integer = int(var)
     except ValueError:

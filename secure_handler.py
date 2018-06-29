@@ -7,8 +7,17 @@ from requests.exceptions import ConnectionError
 
 
 class SecureHandler:
-
+    """
+    Small Wrapper for requests which automatically handles JWT token authorization.
+    """
     def __init__(self, private_key_location, connection):
+        """
+        Initializing the wrapper and reading the private key file. If it is not
+        found the program is stopped and exitcode 1 is thrown.
+
+        :param private_key_location: key file location
+        :param connection: http://<ip/domain>:port
+        """
         try:
             with open(private_key_location, 'rb') as file:
                 private_key = file.read()
@@ -29,6 +38,12 @@ class SecureHandler:
 
     @staticmethod
     def _check_authorization_success(resp):
+        """
+        Checks wether a resp looks like it was created by flask-jwt-extended
+        and therefore represents a failed authorization attempt.
+
+        :param resp: json dict
+        """
         if 'msg' in resp:
             print('JWT token authorization unsuccessfull. '
                   'Please check with your administrator whether your '
@@ -38,11 +53,20 @@ class SecureHandler:
 
     @staticmethod
     def _connection_error():
+        """
+        Prints an error message and shuts down the program.
+        """
         print('Connection to backend could not be established. '
               'Check your settings and try again.')
         sys.exit(1)
 
     def get(self, resource):
+        """
+        GETs the resource. If an error is thrown the program is shut down.
+
+        :param resource: JSON resource to be consumed
+        :returns: json dict
+        """
         try:
             resp = self.session.get(self.connection + resource,
                                     headers=self.header).json()
@@ -52,15 +76,29 @@ class SecureHandler:
             self._connection_error()
 
     def put(self, resource, data):
+        """
+        PUTs the resource. If an error is thrown the program is shut down.
+
+        :param resource: JSON resource to be contacted
+        :param data: dict
+        """
         try:
             resp = self.session.put(self.connection + resource, data=data,
-                                    headers=self.header)
+                                    headers=self.header).json()
             self._check_authorization_success(resp)
             return resp.raise_for_status()
         except ConnectionError:
             self._connection_error()
 
     def safe_put(self, resource, data):
+        """
+        GETs the data before PUTing and updates the values of the returned
+        JSON dict. This is done in order to avoid resetting any values that have
+        not been passed.
+
+        :param resource: JSON resource to be contacted
+        :param data: dict
+        """
         try:
             curr_data = self.get(resource)
             for key, value in data.items():
@@ -71,9 +109,15 @@ class SecureHandler:
             self._connection_error()
 
     def patch(self, resource, data):
+        """
+        PATCHes the resource. If an error is thrown the program is shut down.
+
+        :param resource: JSON resource to be contacted
+        :param data: dict
+        """
         try:
             resp = self.session.patch(self.connection + resource, data=data,
-                                      headers=self.header)
+                                      headers=self.header).json()
             self._check_authorization_success(resp)
             return resp.raise_for_status()
         except ConnectionError:
@@ -84,6 +128,9 @@ class SecureHandler:
         GETs the data before patching and updates the values of the returned
         JSON dict. This is done in order to avoid resetting any values that have
         not been passed.
+
+        :param resource: JSON resource to be contacted
+        :param data: dict
         """
         try:
             curr_data = self.get(resource)
