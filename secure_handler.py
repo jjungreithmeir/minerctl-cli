@@ -119,7 +119,6 @@ class SecureHandler:
             resp = self.session.patch(self.connection + resource, data=data,
                                       headers=self.header).json()
             self._check_authorization_success(resp)
-            return resp.raise_for_status()
         except ConnectionError:
             self._connection_error()
 
