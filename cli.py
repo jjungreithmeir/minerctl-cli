@@ -163,7 +163,9 @@ def _setup_arguments():
     PARSER.add_argument('-s', '--summary', help='show miner summary',
                         dest='summary', action='store_true')
     PARSER.add_argument('-q', '--query', help='query state of specific miner',
-                        dest='query', metavar='<ID>')
+                    dest='query', metavar='<ID>')
+    PARSER.add_argument('-c', '--commit', help='persist changes', default=False,
+                        dest='commit', action='store_true')
 
     SET_PARSER.add_argument('--target', help='set target temperature',
                             dest='set_target', metavar='<temperature>')
@@ -255,7 +257,7 @@ def main():
     if args.miners or args.all:
         cfg = sec_handler.get('/cfg')
         cntr = Counter(cfg['miners'])
-        summary = {'on': cntr[True], 'off': cntr[False], 'disabled': cntr[None]}
+        summary = {'on': cntr[True], 'off': cntr[False], 'disabled': cntr[None], 'total': len(cfg['miners'])}
         summary_text = ', '.join([f'{key}: {value}'\
                                     for key, value in summary.items()])
         print('Miner states: {}'.format(summary_text))
@@ -268,6 +270,10 @@ def main():
         elif not state:
             msg = 'off'
         print('Miner #{} state: {}'.format(args.query, msg))
+    if args.commit:
+        sec_handler.safe_put(
+            '/commit',
+            {'commit': True})
     if args.summary:
         states = sec_handler.get('/cfg')['miners']
         ids_on = [i for i, x in enumerate(states) if x is True]
