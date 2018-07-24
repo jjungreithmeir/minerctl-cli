@@ -1,5 +1,7 @@
 # minerctl CLI tool
 
+To build/use this tool you need `make`, `python3-pip` and `python3` (this was tested on Python 3.6.6). It is also recommended to run this application inside a virtual environment (with a virtualenv folder called `env`).
+
 This small tool is used to remotely configure or debug a mining container.
 Simply install the tool with `pip` (if you have added the python packages to your `PATH`) or use a tool like [pipsi](https://github.com/mitsuhiko/pipsi).
 
